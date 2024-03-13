@@ -9,4 +9,12 @@ public class MapInfo
 
     static public int getGridSize(){ return gridSize;}
     static public int getStartGrid(){ return startGrid;}
+    static public void setTileGrid() {
+        gridSize = 20;
+        
+    }
+    static public void setFurnitureGrid() { gridSize = 5;}
+    
+
+    //ÀÇÁ¸: PlaneGrid, Furniture
 }

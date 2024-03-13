@@ -1,0 +1,4 @@
+﻿type,id,name,depth,width,mesh
+Tile,1,tree,1,1,none
+Furniture,100,chair,1,1,none
+Furniture,101,table,2,3,none

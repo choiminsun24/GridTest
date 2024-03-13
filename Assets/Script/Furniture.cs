@@ -5,35 +5,29 @@ using UnityEngine.EventSystems;
 
 public class Furniture : MonoBehaviour
 {
-
-    //더미
-    Dictionary<int, GameObject> furniture = new Dictionary<int, GameObject>();
-    public GameObject Chair;
-    public int width, height = 2;
-    //가구 id와 해당 가구를 연결하는 데이터는 외부에 두고
-    //여기서는 버튼에 id를 부여하면 해당 데이터를 조회해서 매치되는 가구를 가져오는 것으로 구현
-    //하고 싶은데 일단은 하드코딩합니다.
+    //데이터 저장 형태를 어케할지 미정이라 일단 csv로 
+    Dictionary<int, Dictionary<string, string>> data = new Dictionary<int, Dictionary<string, string>>(); //아이템 정보
 
     int GRIDSIZE;
 
-    private GameObject Item; //선택된 아이템
-    private float fixedY = 0; //모든 오브젝트의 pivot은 0으로 통일해야 할 것 같아요
+    private Dictionary<string, string> itemData = new Dictionary<string, string>();
+    public GameObject item; //선택된 아이템
+    private bool itemChoose = false;
+    private float fixedY = 0;
 
     private Ray ray;
     private RaycastHit hit;
 
     void Start()
     {
-        GRIDSIZE = MapInfo.getGridSize();
-        furniture.Add(1, Chair);
+        data = CSVReader.Read("ItemInfo", 1);
+        GRIDSIZE = MapInfo.getGridSize(); 
 
-        Vector3 test = new Vector3(26, 3, 27);
-        Debug.Log(coordinate(test, 2, 2));
     }
 
     void Update()
     {
-        if (Item) //선택한 가구가 있을 때 마우스를 따라 다닙니다.
+        if (itemChoose) //선택한 가구가 있을 때 마우스를 따라 다닙니다.
         {
             ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
@@ -41,36 +35,37 @@ public class Furniture : MonoBehaviour
             {
                 Vector3 mouse = hit.point;
 
-                Item.transform.position = coordinate(mouse, width, height);
+                item.transform.position = coordinate(mouse);
             }
 
             if (Input.GetMouseButtonDown(0)) //아이템 배치 시도
             {
                 if (!existUIObject()) {
-                    Instantiate(Item, Item.transform.position, Quaternion.identity); //Item에서 아이템 정보 가져오던가
+                    Instantiate(item, item.transform.position, Quaternion.identity);
                     //좌표에 아이템 데이터로 저장
 
-
-                    //그럼 배치 아이템 취소랑 변경이 가능해야 하고 -> cancleFurniture
                     //Item 오브젝트 짜피 반투명 처리랑 색상으로 피드백도 줘야하니까 Instantiate 대신 Item 오브젝트를 하나 만들어서 정보만 바꿀까?
                 }
             }
         }
     }
 
-    private Vector3 coordinate(Vector3 source, int width, int height) //그리드 좌표 계산
+    private Vector3 coordinate(Vector3 source) //그리드 좌표 계산
     {
+        int width = int.Parse(itemData["width"]);
+        int depth = int.Parse(itemData["depth"]);
+
         //피봇(좌상단) 좌표를 중앙 좌표로
-        float centerX = source.x + (width * GRIDSIZE) / 2;
-        float centerZ = source.z - (height * GRIDSIZE) / 2; //좌표상 역방향
+        float centerX = source.x - (width * GRIDSIZE) / 2;
+        float centerZ = source.z + (depth * GRIDSIZE) / 2; //좌표상 역방향
 
         //커서 크기
-        //centerX += 0.7f;
-        //centerZ -= 1.2f;
+        centerX -= 0.7f;
+        centerZ += 1.2f;
 
         //그리드 좌표로
-        centerX -= centerX % GRIDSIZE; centerX -= 5;
-        centerZ -= centerZ % GRIDSIZE; centerZ += 5; 
+        centerX -= centerX % GRIDSIZE;
+        centerZ -= centerZ % GRIDSIZE;
         
         //반환값에 적용
         source.x = centerX;
@@ -89,9 +84,6 @@ public class Furniture : MonoBehaviour
         // 이벤트 시스템을 사용하여 UI 요소를 확인
         var results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
-        //레이캐스트를 eventDataCurrentPosition로 쏴서 해당 위치에 있는 UI를 results에 저장
-        //eventDataCurrentPosition에는 래이캐스트의 위치, 방향, 시작점 등 마우스 포인터의 여러 정보가 저장된대요
-        //요거 노션에 적어놓기
 
         //검사된 UI 요소가 있다면 UI 요소 위에 있다고 판단
         return results.Count > 0;
@@ -99,12 +91,26 @@ public class Furniture : MonoBehaviour
 
     public void makeFurniture(int id) //선택한 아이템의 id
     {
-        Item = Instantiate(furniture[id], Input.mousePosition, Quaternion.identity);
-        //아이템 관련 정보를 가져옵니다. > 오브젝트, size 정보...
+        itemChoose = true;
+        itemData = data[id];
+
+        if (itemData["type"].Equals("Tile")) MapInfo.setTileGrid();
+        else MapInfo.setFurnitureGrid(); //default, 5
+
+        //아이템 세팅 - 일단 큐브로 대체합니다. 나중엔 프리팹 만들어서 그거 이용할 생각
+        int width = int.Parse(itemData["width"]);
+        int depth = int.Parse(itemData["depth"]);
+
+        item.transform.localScale = new Vector3(width, item.transform.localScale.y, depth);
+
+        //item = Instantiate(furniture[id], Input.mousePosition, Quaternion.identity);
     }
+
+    //itemChoose는 가구 위치를 수정하기 위해 선택했을 때도 true가 되는데 어케 구현할지 미정
 
     public void cancleFurniture() //아이템 선택 취소 
     {
-        Item = null;
+        itemChoose = false;
+        item = null;
     }
 }
