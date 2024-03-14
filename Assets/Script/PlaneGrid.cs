@@ -72,7 +72,12 @@ public class PlaneGrid : MonoBehaviour
 
         gridSize = MapInfo.getGridSize();
         startr = startc = MapInfo.getStartGrid();
-        
+        makeGrid(Ir, startr, startc, rowCount, colCount);
+    }
+
+    public void updateGrid()
+    {
+        gridSize = MapInfo.getGridSize();
         makeGrid(Ir, startr, startc, rowCount, colCount);
     }
 }

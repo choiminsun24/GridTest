@@ -5,14 +5,17 @@ using UnityEngine.EventSystems;
 
 public class Furniture : MonoBehaviour
 {
-    //데이터 저장 형태를 어케할지 미정이라 일단 csv로 
-    Dictionary<int, Dictionary<string, string>> data = new Dictionary<int, Dictionary<string, string>>(); //아이템 정보
+    //for interaction
+    public PlaneGrid drawing;
 
-    int GRIDSIZE;
-
-    private Dictionary<string, string> itemData = new Dictionary<string, string>();
+    //for Item
     public GameObject item; //선택된 아이템
+    Dictionary<int, Dictionary<string, string>> data = new Dictionary<int, Dictionary<string, string>>(); //아이템 데이터 저장 형태를 어케할지 미정이라 일단 csv로 
+    private Dictionary<string, string> itemData = new Dictionary<string, string>();
     private bool itemChoose = false;
+
+    //for Item Move
+    private int gridSize;
     private float fixedY = 0;
 
     private Ray ray;
@@ -21,7 +24,7 @@ public class Furniture : MonoBehaviour
     void Start()
     {
         data = CSVReader.Read("ItemInfo", 1);
-        GRIDSIZE = MapInfo.getGridSize(); 
+        gridSize = MapInfo.getGridSize(); 
 
     }
 
@@ -55,21 +58,30 @@ public class Furniture : MonoBehaviour
         int width = int.Parse(itemData["width"]);
         int depth = int.Parse(itemData["depth"]);
 
-        //피봇(좌상단) 좌표를 중앙 좌표로
-        float centerX = source.x - (width * GRIDSIZE) / 2;
-        float centerZ = source.z + (depth * GRIDSIZE) / 2; //좌표상 역방향
-
-        //커서 크기
-        centerX -= 0.7f;
-        centerZ += 1.2f;
+        ////피봇(좌상단) 좌표를 중앙 좌표로
+        float targetX = source.x;
+        float targetZ = source.z;
 
         //그리드 좌표로
-        centerX -= centerX % GRIDSIZE;
-        centerZ -= centerZ % GRIDSIZE;
-        
+        targetX -= item.transform.localScale.x * width / 2;  //물체 중심 기준. width 기준 값이 5라서. 나중에 타일 분리하면 여기 숫자도 바꿔주세요
+        targetX -= targetX % gridSize;
+        if (source.x <= 0) //음수랑 양수랑 뺄셈 방향이 달라서
+        {
+            targetX -= gridSize;
+        }
+        Debug.Log("sourceX: " + source.x + "targetX: " + targetX);
+        //centerZ += centerZ % gridSize;
+
+        targetZ += item.transform.localScale.z * width / 2;  //물체 중심 기준. width 기준 값이 5라서. 나중에 타일 분리하면 여기 숫자도 바꿔주세요
+        targetZ -= targetZ % gridSize;
+        if (source.z >= 0) //음수랑 양수랑 뺄셈 방향이 달라서
+        {
+            targetZ += gridSize;
+        }
+
         //반환값에 적용
-        source.x = centerX;
-        source.z = centerZ;
+        source.x = targetX;
+        source.z = targetZ;
         source.y = fixedY;
 
         return source;
@@ -94,14 +106,23 @@ public class Furniture : MonoBehaviour
         itemChoose = true;
         itemData = data[id];
 
-        if (itemData["type"].Equals("Tile")) MapInfo.setTileGrid();
-        else MapInfo.setFurnitureGrid(); //default, 5
+        if (itemData["type"].Equals("Tile"))
+        {
+            MapInfo.setTileGrid();
+            touchGrid();
+        }
+        else
+        {
+            MapInfo.setFurnitureGrid(); //default, 5
+            touchGrid();
+        }
 
         //아이템 세팅 - 일단 큐브로 대체합니다. 나중엔 프리팹 만들어서 그거 이용할 생각
         int width = int.Parse(itemData["width"]);
         int depth = int.Parse(itemData["depth"]);
 
-        item.transform.localScale = new Vector3(width, item.transform.localScale.y, depth);
+        int ratio = gridSize / 5; //현재 기준 사이즈가 5긴한데 이거 나중에 수정
+        item.transform.localScale = new Vector3(width*ratio, item.transform.localScale.y, depth*ratio); //지금은 크기가 그리드 사이즈지만, 그리드 사이즈는 데이터 저장 시 사용될 거고 보이는 아이템은 고유 크기가 있을 것(아마도)
 
         //item = Instantiate(furniture[id], Input.mousePosition, Quaternion.identity);
     }
@@ -112,5 +133,11 @@ public class Furniture : MonoBehaviour
     {
         itemChoose = false;
         item = null;
+    }
+
+    private void touchGrid()
+    {
+        gridSize = MapInfo.getGridSize();
+        drawing.updateGrid();
     }
 }
